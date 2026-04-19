@@ -91,6 +91,38 @@
         program = "${self.packages.${system}.default}/bin/caldy";
       };
 
+      homeManagerModules.default = { config, lib, pkgs, ... }:
+        let cfg = config.programs.caldy;
+        in {
+          options.programs.caldy = {
+            enable = lib.mkEnableOption "caldy — Google Calendar weekly widget";
+            package = lib.mkOption {
+              type = lib.types.package;
+              default = self.packages.${pkgs.system}.default;
+              defaultText = lib.literalExpression "caldy.packages.\${pkgs.system}.default";
+              description = "The caldy package to install.";
+            };
+          };
+
+          config = lib.mkIf cfg.enable {
+            home.packages = [ cfg.package ];
+
+            systemd.user.services.caldy = {
+              Unit = {
+                Description = "caldy — Google Calendar weekly widget";
+                PartOf = [ "graphical-session.target" ];
+                After = [ "graphical-session.target" ];
+              };
+              Service = {
+                ExecStart = lib.getExe cfg.package;
+                Restart = "on-failure";
+                RestartSec = 5;
+              };
+              Install.WantedBy = [ "graphical-session.target" ];
+            };
+          };
+        };
+
       devShells.${system}.default = pkgs.mkShell {
         name = "caldy-dev";
 

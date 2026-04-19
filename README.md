@@ -101,6 +101,32 @@ or in a home-manager module:
 home.packages = [ inputs.caldy.packages.x86_64-linux.default ];
 ```
 
+### Autostart via home-manager
+
+For a home-manager setup, caldy also ships a module that installs the
+package and registers a user systemd service tied to
+`graphical-session.target` — it starts with your compositor and restarts
+on crash:
+
+```nix
+{
+  imports = [ inputs.caldy.homeManagerModules.default ];
+  programs.caldy.enable = true;
+}
+```
+
+Check it after rebuilding with:
+
+```sh
+systemctl --user status caldy
+journalctl --user -u caldy -f
+```
+
+Note: the service expects your compositor to have activated
+`graphical-session.target` (Hyprland/Sway/river with systemd integration
+do this automatically; bare setups may need `systemctl --user start
+graphical-session.target` from your compositor's exec-once).
+
 The same OAuth credentials setup in `~/.config/caldy/env.json` (or the
 `CALDY_GOOGLE_CLIENT_ID` / `CALDY_GOOGLE_CLIENT_SECRET` env vars) is still
 required on first run.
