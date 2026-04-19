@@ -63,6 +63,48 @@ npm run build
 # produces ./dist/caldy — a single executable bundle
 ```
 
+## Install via Nix
+
+Try it ad-hoc:
+
+```sh
+nix run github:peteyycz/caldy
+```
+
+Install into your user profile:
+
+```sh
+nix profile install github:peteyycz/caldy
+```
+
+Declarative install (flake input). Add caldy to your system flake's inputs
+and reference the package wherever you install user apps:
+
+```nix
+{
+  inputs.caldy = {
+    url = "github:peteyycz/caldy";
+    inputs.nixpkgs.follows = "nixpkgs";
+  };
+}
+```
+
+Then, in a NixOS module:
+
+```nix
+environment.systemPackages = [ inputs.caldy.packages.x86_64-linux.default ];
+```
+
+or in a home-manager module:
+
+```nix
+home.packages = [ inputs.caldy.packages.x86_64-linux.default ];
+```
+
+The same OAuth credentials setup in `~/.config/caldy/env.json` (or the
+`CALDY_GOOGLE_CLIENT_ID` / `CALDY_GOOGLE_CLIENT_SECRET` env vars) is still
+required on first run.
+
 ## Configuration
 
 Optional settings live at `$XDG_CONFIG_HOME/caldy/config.toml`. If the file is

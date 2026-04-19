@@ -87,19 +87,22 @@ function startLoopbackServer(
 
     msg.set_status(200, null);
     msg.set_response("text/html", Soup.MemoryUse.COPY, CALLBACK_HTML);
-
-    if (error) {
-      consumed = true;
-      pending.reject(new Error(`OAuth error: ${error}`));
-      return;
-    }
-    if (state !== pending.state || !code) {
-      pending.reject(new Error("OAuth state mismatch or missing code"));
-      return;
-    }
-
     consumed = true;
-    pending.resolve(code);
+
+    // Defer resolution until Soup has flushed the response to the browser;
+    // otherwise teardown() closes the connection before the success page renders.
+    const finishedId = msg.connect("finished", () => {
+      msg.disconnect(finishedId);
+      if (error) {
+        pending.reject(new Error(`OAuth error: ${error}`));
+        return;
+      }
+      if (state !== pending.state || !code) {
+        pending.reject(new Error("OAuth state mismatch or missing code"));
+        return;
+      }
+      pending.resolve(code);
+    });
   });
 
   let ok = false;
