@@ -1,17 +1,17 @@
 export type DayKey = string;
 
-export function startOfWeek(date: Date): Date {
+export function startOfWeek(date: Date, startDay: number = 1): Date {
   const d = new Date(date);
   d.setHours(0, 0, 0, 0);
   const day = d.getDay();
-  const diff = (day + 6) % 7;
+  const diff = (day - startDay + 7) % 7;
   d.setDate(d.getDate() - diff);
   return d;
 }
 
-export function endOfWeek(weekStart: Date): Date {
+export function endOfWeek(weekStart: Date, length: number = 7): Date {
   const end = new Date(weekStart);
-  end.setDate(end.getDate() + 7);
+  end.setDate(end.getDate() + length);
   return end;
 }
 
@@ -21,8 +21,8 @@ export function addDays(date: Date, days: number): Date {
   return d;
 }
 
-export function weekDays(weekStart: Date): Date[] {
-  return Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
+export function weekDays(weekStart: Date, length: number = 7): Date[] {
+  return Array.from({ length }, (_, i) => addDays(weekStart, i));
 }
 
 export function dayKey(date: Date): DayKey {
@@ -38,12 +38,18 @@ export function formatHM(date: Date): string {
   return `${h}:${m}`;
 }
 
-export function formatRange(weekStart: Date): string {
-  const end = addDays(weekStart, 6);
-  const fmt = new Intl.DateTimeFormat(undefined, { month: "short", day: "numeric" });
+export function formatRange(weekStart: Date, length: number = 7): string {
+  const end = addDays(weekStart, length - 1);
+  const fmt = new Intl.DateTimeFormat(undefined, {
+    month: "short",
+    day: "numeric",
+  });
   return `${fmt.format(weekStart)} – ${fmt.format(end)}`;
 }
 
 export function formatWeekday(date: Date): string {
-  return new Intl.DateTimeFormat(undefined, { weekday: "short", day: "numeric" }).format(date);
+  return new Intl.DateTimeFormat(undefined, {
+    weekday: "short",
+    day: "numeric",
+  }).format(date);
 }

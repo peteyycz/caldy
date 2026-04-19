@@ -63,6 +63,19 @@ npm run build
 # produces ./dist/caldy — a single executable bundle
 ```
 
+## Configuration
+
+Optional settings live at `$XDG_CONFIG_HOME/caldy/config.toml`. If the file is
+missing, defaults apply (7-day week, Monday start). Template:
+
+```toml
+[week]
+length = 7              # 5 (Mon–Fri work week) or 7 (full week)
+start_day = "monday"    # day name ("sunday".."saturday") or 0–6 (0 = Sunday)
+```
+
+See `config.example.toml` in the repo for a copy-pasteable version.
+
 ## Data
 
 - Scope: `https://www.googleapis.com/auth/calendar` (read-write, so future

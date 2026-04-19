@@ -58,14 +58,15 @@ function onWindowMount(win: Astal.Window) {
 }
 
 export default function Window({ onSignIn, onWeekChange }: Props) {
-  const shiftWeek = (days: number) => {
+  const shiftWeek = (direction: 1 | -1) => {
     const s = appState.get();
-    patch({ weekStart: addDays(s.weekStart, days) });
+    patch({ weekStart: addDays(s.weekStart, direction * s.weekLength) });
     onWeekChange();
   };
 
   const goToday = () => {
-    patch({ weekStart: startOfWeek(new Date()) });
+    const s = appState.get();
+    patch({ weekStart: startOfWeek(new Date(), s.weekStartDay) });
     onWeekChange();
   };
 
@@ -79,20 +80,10 @@ export default function Window({ onSignIn, onWeekChange }: Props) {
       layer={Astal.Layer.OVERLAY}
       keymode={Astal.Keymode.ON_DEMAND}
       widthRequest={880}
+      heightRequest={500}
       $={onWindowMount}
     >
       <box orientation={Gtk.Orientation.VERTICAL} class="root" spacing={8}>
-        <box orientation={Gtk.Orientation.HORIZONTAL} class="topbar" spacing={8}>
-          <label class="app-title" xalign={0} hexpand label="caldy" />
-          <button
-            class="nav close"
-            onClicked={() => {
-              console.log("caldy: close button onClicked");
-              closeWindow();
-            }}
-            label="✕"
-          />
-        </box>
         <With value={appState}>
           {(s) =>
             !s.tokens ? (
@@ -105,9 +96,10 @@ export default function Window({ onSignIn, onWeekChange }: Props) {
               <box orientation={Gtk.Orientation.VERTICAL} spacing={8} hexpand vexpand>
                 <Header
                   weekStart={s.weekStart}
-                  onPrev={() => shiftWeek(-7)}
+                  weekLength={s.weekLength}
+                  onPrev={() => shiftWeek(-1)}
                   onToday={goToday}
-                  onNext={() => shiftWeek(7)}
+                  onNext={() => shiftWeek(1)}
                 />
                 {s.error ? (
                   <label class="banner-error" wrap label={s.error} />
@@ -117,6 +109,7 @@ export default function Window({ onSignIn, onWeekChange }: Props) {
                 ) : (
                   <WeekView
                     weekStart={s.weekStart}
+                    weekLength={s.weekLength}
                     events={s.events}
                     calendars={s.calendars}
                   />

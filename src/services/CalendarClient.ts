@@ -102,10 +102,11 @@ export class CalendarClient {
   async fetchWeek(
     calendars: GCalCalendar[],
     weekStart: Date,
+    length: number,
   ): Promise<GCalEvent[]> {
     const timeMin = new Date(weekStart);
     const timeMax = new Date(weekStart);
-    timeMax.setDate(timeMax.getDate() + 7);
+    timeMax.setDate(timeMax.getDate() + length);
 
     const results = await Promise.all(
       calendars.map((cal) =>

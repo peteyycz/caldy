@@ -6,12 +6,18 @@ import DayColumn from "./DayColumn.js";
 
 interface Props {
   weekStart: Date;
+  weekLength: number;
   events: GCalEvent[];
   calendars: GCalCalendar[];
 }
 
-export default function WeekView({ weekStart, events, calendars }: Props) {
-  const days = weekDays(weekStart);
+export default function WeekView({
+  weekStart,
+  weekLength,
+  events,
+  calendars,
+}: Props) {
+  const days = weekDays(weekStart, weekLength);
   const todayKey = dayKey(new Date());
 
   const calendarsById = new Map(calendars.map((c) => [c.id, c]));

@@ -2,7 +2,8 @@ import app from "ags/gtk4/app";
 
 import { CalendarClient } from "./services/CalendarClient.js";
 import { authorize, loadPersistedTokens } from "./services/OAuth.js";
-import { appState, patch } from "./state/appState.js";
+import { loadSettings } from "./services/Settings.js";
+import { applySettings, appState, patch } from "./state/appState.js";
 import Window, {
   setWindowVisible,
   toggleWindow,
@@ -15,11 +16,11 @@ let client: CalendarClient | null = null;
 
 async function refreshEvents() {
   if (!client) return;
-  const { weekStart } = appState.get();
+  const { weekStart, weekLength } = appState.get();
   patch({ loading: true, error: null });
   try {
     const calendars = await client.listCalendars();
-    const events = await client.fetchWeek(calendars, weekStart);
+    const events = await client.fetchWeek(calendars, weekStart, weekLength);
     patch({
       calendars,
       events,
@@ -52,6 +53,7 @@ async function signIn() {
 }
 
 async function bootstrap() {
+  applySettings(loadSettings());
   const persisted = loadPersistedTokens();
   if (persisted) {
     client = new CalendarClient(persisted);
