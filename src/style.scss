@@ -1,9 +1,21 @@
-$bg: #1a1b1f;
-$bg-elev: #24262d;
-$fg: #e6e8ee;
-$fg-muted: #9aa0ad;
-$accent: #4285f4;
-$danger: #ea4335;
+// GTK4 named-color references — wrapped in unquote() so dart-sass doesn't try
+// to parse the leading `@` as a Sass at-rule. Resolved at runtime by the
+// `@define-color` block generated from config.toml in src/services/Theme.ts.
+$bg: unquote("@caldy_bg");
+$surface: unquote("@caldy_surface");
+$surface-hi: unquote("@caldy_surface_hi");
+$fg: unquote("@caldy_fg");
+$fg-muted: unquote("@caldy_fg_muted");
+$accent: unquote("@caldy_accent");
+$danger: unquote("@caldy_danger");
+
+@function gtk-shade($color, $factor) {
+  @return unquote("shade(#{$color}, #{$factor})");
+}
+
+@function gtk-alpha($color, $alpha) {
+  @return unquote("alpha(#{$color}, #{$alpha})");
+}
 
 .caldy-window {
   background: transparent;
@@ -28,6 +40,35 @@ $danger: #ea4335;
   }
 }
 
+button.nav {
+  background: $surface;
+  background-image: none;
+  border: none;
+  box-shadow: none;
+  min-height: 0;
+  min-width: 0;
+  padding: 4px 10px;
+  color: $fg;
+  border-radius: 6px;
+  font-weight: 500;
+}
+button.nav:hover {
+  background: gtk-shade($surface, 1.15);
+  background-image: none;
+}
+button.nav:active {
+  background: gtk-shade($surface, 1.3);
+  background-image: none;
+}
+
+button.nav.close {
+  margin-left: 4px;
+  color: $fg-muted;
+}
+button.nav.close:hover {
+  color: $danger;
+}
+
 .header {
   padding: 4px 8px;
 
@@ -35,27 +76,11 @@ $danger: #ea4335;
     font-size: 16pt;
     font-weight: 600;
   }
-
-  .nav {
-    padding: 4px 10px;
-    background: $bg-elev;
-    border-radius: 6px;
-  }
-  .nav:hover {
-    background: lighten($bg-elev, 5%);
-  }
-  .nav.close {
-    margin-left: 4px;
-    color: $fg-muted;
-  }
-  .nav.close:hover {
-    color: $danger;
-  }
 }
 
 .banner-error {
   padding: 8px 10px;
-  background: transparentize($danger, 0.85);
+  background: gtk-alpha($danger, 0.15);
   color: $danger;
   border-radius: 6px;
 }
@@ -74,7 +99,7 @@ $danger: #ea4335;
 
 .day-column {
   padding: 8px;
-  background: $bg-elev;
+  background: $surface;
   border-radius: 10px;
   min-width: 110px;
 
@@ -85,13 +110,13 @@ $danger: #ea4335;
   }
 
   .day-empty {
-    color: transparentize($fg-muted, 0.5);
+    color: gtk-alpha($fg-muted, 0.5);
     padding: 4px 0;
   }
 }
 
 .day-today {
-  background: lighten($bg-elev, 4%);
+  background: $surface-hi;
   .day-header {
     color: $accent;
   }
@@ -99,7 +124,7 @@ $danger: #ea4335;
 
 .event-chip {
   padding: 6px 8px 6px 10px;
-  background: lighten($bg-elev, 4%);
+  background: $surface-hi;
   border-radius: 6px;
 
   .event-time {
@@ -129,7 +154,7 @@ $danger: #ea4335;
     font-weight: 600;
   }
   .auth-button:hover {
-    background: lighten($accent, 5%);
+    background: gtk-shade($accent, 1.1);
   }
   .auth-error {
     color: $danger;

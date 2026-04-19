@@ -9,3 +9,15 @@ length = 7
 # Accepts a name ("monday", "tuesday", ...) or a number 0–6
 # where 0 = Sunday, 1 = Monday, ..., 6 = Saturday.
 start_day = "monday"
+
+# [theme] — override any of the colors below with hex strings (#rrggbb).
+# Any key can be omitted to keep the built-in default. Example palette below
+# maps to Gruvbox Dark.
+[theme]
+bg         = "#282828"   # window background
+surface    = "#3c3836"   # day columns, nav buttons
+surface_hi = "#504945"   # today column, event chips, nav button hover
+fg         = "#ebdbb2"   # primary text
+fg_muted   = "#a89984"   # secondary text, day headers
+accent     = "#fabd2f"   # primary action / today highlight
+danger     = "#fb4934"   # errors, close-button hover

@@ -3,6 +3,7 @@ import app from "ags/gtk4/app";
 import { CalendarClient } from "./services/CalendarClient.js";
 import { authorize, loadPersistedTokens } from "./services/OAuth.js";
 import { loadSettings } from "./services/Settings.js";
+import { generateThemeCss } from "./services/Theme.js";
 import { applySettings, appState, patch } from "./state/appState.js";
 import Window, {
   setWindowVisible,
@@ -52,8 +53,14 @@ async function signIn() {
   }
 }
 
-async function bootstrap() {
-  applySettings(loadSettings());
+function loadAndApplySettings() {
+  const settings = loadSettings();
+  applySettings(settings);
+  app.apply_css(generateThemeCss(settings.theme));
+  app.apply_css(style);
+}
+
+async function restoreSession() {
   const persisted = loadPersistedTokens();
   if (persisted) {
     client = new CalendarClient(persisted);
@@ -64,7 +71,6 @@ async function bootstrap() {
 
 app.start({
   instanceName: "caldy",
-  css: style,
   requestHandler(argv, res) {
     const cmd = (argv[0] ?? "").trim();
     console.log(
@@ -89,10 +95,11 @@ app.start({
     }
   },
   main() {
+    loadAndApplySettings();
     Window({
       onSignIn: () => void signIn(),
       onWeekChange: () => void refreshEvents(),
     });
-    void bootstrap();
+    void restoreSession();
   },
 });

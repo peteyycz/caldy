@@ -66,15 +66,29 @@ npm run build
 ## Configuration
 
 Optional settings live at `$XDG_CONFIG_HOME/caldy/config.toml`. If the file is
-missing, defaults apply (7-day week, Monday start). Template:
+missing, defaults apply (7-day week, Monday start, built-in dark palette).
 
 ```toml
 [week]
 length = 7              # 5 (Mon–Fri work week) or 7 (full week)
 start_day = "monday"    # day name ("sunday".."saturday") or 0–6 (0 = Sunday)
+
+[theme]
+# All keys optional; missing ones keep the built-in dark defaults.
+bg         = "#1a1b1f"  # window background
+surface    = "#24262d"  # day columns, nav buttons
+surface_hi = "#2a2d36"  # today column, event chips, nav button hover
+fg         = "#e6e8ee"  # primary text
+fg_muted   = "#9aa0ad"  # secondary text, day headers
+accent     = "#4285f4"  # primary action / today highlight
+danger     = "#ea4335"  # errors, close-button hover
 ```
 
-See `config.example.toml` in the repo for a copy-pasteable version.
+Invalid hex values are skipped (fall back to the default for that key) and
+logged; valid keys still apply.
+
+See `config.example.toml` in the repo for a copy-pasteable version with a
+Gruvbox-dark example `[theme]` block.
 
 ## Data
 
