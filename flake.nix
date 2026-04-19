@@ -105,7 +105,10 @@
           };
 
           config = lib.mkIf cfg.enable {
-            home.packages = [ cfg.package ];
+            # astalIo ships the `astal` CLI used to send toggle/show/hide
+            # requests to the running caldy instance (e.g. from a compositor
+            # bind: `astal -i caldy toggle`).
+            home.packages = [ cfg.package astalIo ];
 
             systemd.user.services.caldy = {
               Unit = {
