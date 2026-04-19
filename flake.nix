@@ -62,8 +62,10 @@
           mkdir -p dist
         '';
 
-        # The `build` script in package.json runs `ags bundle ... ./dist/caldy`.
-        # We override the install step to place that single artifact in $out/bin.
+        # `npm run build` bundles to ./dist/caldy. The bundled app uses
+        # Gio.ApplicationFlags.HANDLES_COMMAND_LINE, so `caldy toggle` from
+        # a compositor bind forwards over DBus to the running instance —
+        # no wrapper or external client needed.
         dontNpmInstall = true;
         installPhase = ''
           runHook preInstall
@@ -105,10 +107,7 @@
           };
 
           config = lib.mkIf cfg.enable {
-            # astalIo ships the `astal` CLI used to send toggle/show/hide
-            # requests to the running caldy instance (e.g. from a compositor
-            # bind: `astal -i caldy toggle`).
-            home.packages = [ cfg.package astalIo ];
+            home.packages = [ cfg.package ];
 
             systemd.user.services.caldy = {
               Unit = {

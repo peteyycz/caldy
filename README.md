@@ -127,38 +127,36 @@ Note: the service expects your compositor to have activated
 do this automatically; bare setups may need `systemctl --user start
 graphical-session.target` from your compositor's exec-once).
 
-Enabling `programs.caldy` also pulls in the `astal` CLI (from
-`astal-io`), which is used to send requests to the running instance.
-
 ### Binding toggle on Hyprland
 
-Once caldy is running, talk to it with the `astal` client:
+The `caldy` binary is its own client: running it with no arguments starts
+the widget (which is what the systemd service does), and running it with
+arguments while an instance is already live forwards them over DBus to
+that instance via `Gio.ApplicationFlags.HANDLES_COMMAND_LINE`. So:
 
 ```sh
-astal -i caldy toggle    # show/hide
-astal -i caldy show      # force show
-astal -i caldy hide      # force hide
-astal -i caldy refresh   # re-fetch events from Google
-astal -l                 # list running Astal instances
+caldy toggle    # show/hide
+caldy show      # force show
+caldy hide      # force hide
+caldy refresh   # re-fetch events from Google
 ```
 
 Bind toggle to `Super+C` in your Hyprland config:
 
 ```
-bind = SUPER, C, exec, astal -i caldy toggle
+bind = SUPER, C, exec, caldy toggle
 ```
 
 If you configure Hyprland via home-manager, add it declaratively:
 
 ```nix
 wayland.windowManager.hyprland.settings.bind = [
-  "SUPER, C, exec, astal -i caldy toggle"
+  "SUPER, C, exec, caldy toggle"
 ];
 ```
 
-Sway/river use the same `astal -i caldy toggle` command — only the bind
-syntax changes (`bindsym $mod+c exec …` for sway, `riverctl map …` for
-river).
+Sway/river use the same `caldy toggle` command — only the bind syntax
+changes (`bindsym $mod+c exec …` for sway, `riverctl map …` for river).
 
 The same OAuth credentials setup in `~/.config/caldy/env.json` (or the
 `CALDY_GOOGLE_CLIENT_ID` / `CALDY_GOOGLE_CLIENT_SECRET` env vars) is still
