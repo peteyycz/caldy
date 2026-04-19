@@ -1,0 +1,11 @@
+{
+  "name": "caldy",
+  "version": "0.1.0",
+  "description": "Google Calendar weekly widget built with Astal4 + GJS",
+  "private": true,
+  "scripts": {
+    "dev": "ags run --gtk 4 ./src/app.tsx",
+    "build": "ags bundle --gtk 4 ./src/app.tsx ./dist/caldy",
+    "types": "ags types --gtk 4 -d ."
+  }
+}

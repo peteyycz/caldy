@@ -1,0 +1,137 @@
+$bg: #1a1b1f;
+$bg-elev: #24262d;
+$fg: #e6e8ee;
+$fg-muted: #9aa0ad;
+$accent: #4285f4;
+$danger: #ea4335;
+
+.caldy-window {
+  background: transparent;
+}
+
+.root {
+  padding: 16px;
+  background: $bg;
+  color: $fg;
+  border-radius: 12px;
+  font-family: "Inter", "Cantarell", sans-serif;
+  font-size: 12pt;
+}
+
+.topbar {
+  padding: 2px 4px 0;
+
+  .app-title {
+    font-size: 11pt;
+    font-weight: 600;
+    color: $fg-muted;
+  }
+}
+
+.header {
+  padding: 4px 8px;
+
+  .range {
+    font-size: 16pt;
+    font-weight: 600;
+  }
+
+  .nav {
+    padding: 4px 10px;
+    background: $bg-elev;
+    border-radius: 6px;
+  }
+  .nav:hover {
+    background: lighten($bg-elev, 5%);
+  }
+  .nav.close {
+    margin-left: 4px;
+    color: $fg-muted;
+  }
+  .nav.close:hover {
+    color: $danger;
+  }
+}
+
+.banner-error {
+  padding: 8px 10px;
+  background: transparentize($danger, 0.85);
+  color: $danger;
+  border-radius: 6px;
+}
+
+.week-view {
+  padding: 0 4px;
+}
+
+.loading-view {
+  padding: 32px;
+
+  .loading-label {
+    color: $fg-muted;
+  }
+}
+
+.day-column {
+  padding: 8px;
+  background: $bg-elev;
+  border-radius: 10px;
+  min-width: 110px;
+
+  .day-header {
+    font-weight: 600;
+    color: $fg-muted;
+    padding-bottom: 4px;
+  }
+
+  .day-empty {
+    color: transparentize($fg-muted, 0.5);
+    padding: 4px 0;
+  }
+}
+
+.day-today {
+  background: lighten($bg-elev, 4%);
+  .day-header {
+    color: $accent;
+  }
+}
+
+.event-chip {
+  padding: 6px 8px 6px 10px;
+  background: lighten($bg-elev, 4%);
+  border-radius: 6px;
+
+  .event-time {
+    color: $fg-muted;
+    font-size: 10pt;
+  }
+  .event-title {
+    font-size: 11pt;
+  }
+}
+
+.auth-prompt {
+  padding: 32px;
+
+  .auth-title {
+    font-size: 28pt;
+    font-weight: 700;
+  }
+  .auth-subtitle {
+    color: $fg-muted;
+  }
+  .auth-button {
+    padding: 10px 20px;
+    background: $accent;
+    color: white;
+    border-radius: 8px;
+    font-weight: 600;
+  }
+  .auth-button:hover {
+    background: lighten($accent, 5%);
+  }
+  .auth-error {
+    color: $danger;
+  }
+}
