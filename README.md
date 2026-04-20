@@ -31,19 +31,17 @@ using OAuth 2.0 with a loopback redirect.
    npm run types
    ```
 
-3. Create OAuth credentials at <https://console.cloud.google.com/apis/credentials>
-   → **Create credentials** → **OAuth client ID** → **Desktop app**. Enable the
-   Google Calendar API for the same project.
-
-4. For local development (`npm run dev`), export the credentials:
+3. For local development (`npm run dev`), export caldy's shared desktop
+   OAuth credentials:
    ```sh
-   export CALDY_GOOGLE_CLIENT_ID='...apps.googleusercontent.com'
-   export CALDY_GOOGLE_CLIENT_SECRET='...'
+   export CALDY_GOOGLE_CLIENT_ID='285266319800-h9kcbfncimvi88kermsepo6rbpq58qr0.apps.googleusercontent.com'
+   export CALDY_GOOGLE_CLIENT_SECRET='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'
    ```
    The easiest home for these is `.envrc.local` (already git-ignored)
-   alongside the shipped `.envrc`. These env vars are only consulted when
-   the binary wasn't built through Nix with embedded credentials (see
-   **Providing OAuth credentials** below for the Nix path).
+   alongside the shipped `.envrc`. Nix builds bake these in automatically
+   via the flake defaults — the env-var fallback only applies to dev-shell
+   runs. If you'd rather use your own Google Cloud project, see
+   **Providing OAuth credentials** below.
 
 ## Running
 
@@ -109,16 +107,18 @@ home.packages = [ inputs.caldy.packages.x86_64-linux.default ];
 
 ### Providing OAuth credentials
 
-caldy's `client_id` and `client_secret` are baked into the binary at build
-time. The flake exposes `clientId` and `clientSecret` as package arguments
-(both default to empty strings). A binary built without overrides will
-still launch, but sign-in throws a "Missing Google OAuth credentials"
-error unless the `CALDY_GOOGLE_CLIENT_ID` / `CALDY_GOOGLE_CLIENT_SECRET`
-env vars are set at runtime.
+caldy ships with a shared desktop OAuth client baked into the flake
+defaults — `nix build`, `nix run`, and the home-manager module work
+out of the box without any Google Cloud setup on your end. The Calendar
+API's quotas are per-user (not per-client), so sharing one client id is
+fine.
 
-Ad-hoc local build:
+If you'd rather use your own Google Cloud project (e.g. your org
+requires a specific audit trail, or you're hitting rate limits), the
+flake exposes `clientId` and `clientSecret` as package arguments:
 
 ```sh
+# Ad-hoc local build with your own client
 nix build --impure --expr \
   'let f = builtins.getFlake (toString ./.);
    in f.packages.x86_64-linux.default.override {
@@ -139,7 +139,7 @@ inputs.caldy.packages.x86_64-linux.default.override {
 }
 ```
 
-Via the home-manager module (preferred — see next section):
+Via the home-manager module:
 
 ```nix
 programs.caldy = {
@@ -149,14 +149,17 @@ programs.caldy = {
 };
 ```
 
-#### Why it's OK to embed the "secret"
+If you want a binary with no credentials baked in (e.g. so it falls back
+to `CALDY_GOOGLE_CLIENT_ID` / `CALDY_GOOGLE_CLIENT_SECRET` env vars at
+runtime), pass empty strings: `.override { clientId = ""; clientSecret = ""; }`.
+
+#### Why it's OK to ship the "secret"
 
 Google classifies desktop OAuth clients as "public clients" — the
 `client_secret` authenticates the *application* to Google, not the user,
-and PKCE protects the authorization-code exchange. Committing this pair
-into a private config repo or baking it into a Nix-built binary is the
-expected Google-approved pattern for desktop apps. Don't publish it in
-public repos all the same.
+and PKCE protects the authorization-code exchange. Shipping the pair
+with a desktop app is the expected Google-approved pattern; GNOME
+Online Accounts, Thunderbird, and Evolution all do the same.
 
 ### Autostart via home-manager
 

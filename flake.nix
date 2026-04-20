@@ -36,10 +36,20 @@
         astal4
         astalIo
       ];
+
+      # Desktop OAuth client — Google classifies these as public
+      # credentials. PKCE protects the auth flow; the calendar project
+      # has only the Calendar API (free, quota-only) enabled. Same
+      # pattern as gnome-online-accounts, Thunderbird, Evolution.
+      defaultClientId = "285266319800-h9kcbfncimvi88kermsepo6rbpq58qr0.apps.googleusercontent.com";
+      defaultClientSecret = "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";
     in {
       packages.${system}.default = pkgs.callPackage (
         { lib, buildNpmPackage, wrapGAppsHook4, gobject-introspection
-        , glib-networking, clientId ? "", clientSecret ? "" }:
+        , glib-networking
+        , clientId ? defaultClientId
+        , clientSecret ? defaultClientSecret
+        }:
         buildNpmPackage {
           pname = "caldy";
           version = "0.1.0";
@@ -56,9 +66,11 @@
           nativeBuildInputs = [ agsPkg wrapGAppsHook4 gobject-introspection ];
           buildInputs = runtimeDeps;
 
-          # Bake OAuth credentials into Config.ts at build time. Placeholder
-          # tokens are left intact when the args are empty — the runtime
-          # falls back to CALDY_GOOGLE_CLIENT_ID/_SECRET env vars in that case.
+          # Bake OAuth credentials into Config.ts at build time. Defaults
+          # to caldy's shared desktop client; pass empty strings via
+          # `.override { clientId = ""; clientSecret = ""; }` to keep the
+          # placeholders intact and fall back to CALDY_GOOGLE_CLIENT_ID /
+          # CALDY_GOOGLE_CLIENT_SECRET env vars at runtime.
           preBuild = ''
             mkdir -p dist
             substituteInPlace src/services/Config.ts \
@@ -107,17 +119,23 @@
             enable = lib.mkEnableOption "caldy — Google Calendar weekly widget";
             clientId = lib.mkOption {
               type = lib.types.str;
-              default = "";
-              description = "Google OAuth desktop client_id baked into the binary.";
+              default = defaultClientId;
+              defaultText = lib.literalMD "caldy's shared desktop OAuth client_id";
+              description = ''
+                Google OAuth desktop client_id baked into the binary.
+                Defaults to caldy's shared desktop client — override if you
+                prefer to use your own Google Cloud project.
+              '';
             };
             clientSecret = lib.mkOption {
               type = lib.types.str;
-              default = "";
+              default = defaultClientSecret;
+              defaultText = lib.literalMD "caldy's shared desktop OAuth client_secret";
               description = ''
                 Google OAuth desktop client_secret baked into the binary.
                 Desktop OAuth clients are "public" per Google's spec — this
-                value is not truly secret, but avoid committing it to
-                public repos.
+                value is not truly secret. Defaults to caldy's shared
+                desktop client.
               '';
             };
             package = lib.mkOption {
