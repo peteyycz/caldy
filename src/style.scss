@@ -1,20 +1,22 @@
-// GTK4 named-color references — wrapped in unquote() so dart-sass doesn't try
+@use "sass:string";
+
+// GTK4 named-color references — wrapped in string.unquote() so dart-sass doesn't try
 // to parse the leading `@` as a Sass at-rule. Resolved at runtime by the
 // `@define-color` block generated from config.toml in src/services/Theme.ts.
-$bg: unquote("@caldy_bg");
-$surface: unquote("@caldy_surface");
-$surface-hi: unquote("@caldy_surface_hi");
-$fg: unquote("@caldy_fg");
-$fg-muted: unquote("@caldy_fg_muted");
-$accent: unquote("@caldy_accent");
-$danger: unquote("@caldy_danger");
+$bg: string.unquote("@caldy_bg");
+$surface: string.unquote("@caldy_surface");
+$surface-hi: string.unquote("@caldy_surface_hi");
+$fg: string.unquote("@caldy_fg");
+$fg-muted: string.unquote("@caldy_fg_muted");
+$accent: string.unquote("@caldy_accent");
+$danger: string.unquote("@caldy_danger");
 
 @function gtk-shade($color, $factor) {
-  @return unquote("shade(#{$color}, #{$factor})");
+  @return string.unquote("shade(#{$color}, #{$factor})");
 }
 
 @function gtk-alpha($color, $alpha) {
-  @return unquote("alpha(#{$color}, #{$alpha})");
+  @return string.unquote("alpha(#{$color}, #{$alpha})");
 }
 
 .caldy-window {
@@ -116,10 +118,17 @@ button.nav.close:hover {
 }
 
 .day-today {
-  background: $surface-hi;
+  background: gtk-shade($surface-hi, 1.15);
   .day-header {
     color: $accent;
   }
+}
+
+.now-indicator {
+  background: $danger;
+  min-height: 2px;
+  margin: 2px 0;
+  border-radius: 1px;
 }
 
 .event-chip {
@@ -134,6 +143,64 @@ button.nav.close:hover {
   .event-title {
     font-size: 11pt;
   }
+}
+
+.calendar-bar {
+  padding: 6px 4px 2px;
+
+  scrolledwindow {
+    min-height: 0;
+  }
+}
+
+button.calendar-toggle {
+  background: $surface;
+  background-image: none;
+  border: none;
+  box-shadow: none;
+  min-height: 0;
+  padding: 4px 10px;
+  color: $fg;
+  border-radius: 14px;
+  font-size: 10pt;
+}
+button.calendar-toggle:hover {
+  background: gtk-shade($surface, 1.15);
+  background-image: none;
+}
+button.calendar-toggle.hidden {
+  color: $fg-muted;
+  background: gtk-alpha($surface, 0.5);
+
+  .calendar-dot {
+    opacity: 0.35;
+  }
+}
+
+.calendar-dot {
+  min-width: 10px;
+  min-height: 10px;
+  border-radius: 5px;
+  margin-top: 2px;
+}
+
+button.add-account {
+  background: $surface;
+  background-image: none;
+  border: none;
+  box-shadow: none;
+  min-height: 0;
+  min-width: 0;
+  padding: 2px 10px;
+  color: $fg-muted;
+  border-radius: 14px;
+  font-size: 14pt;
+  font-weight: 600;
+}
+button.add-account:hover {
+  background: gtk-shade($surface, 1.15);
+  background-image: none;
+  color: $fg;
 }
 
 .auth-prompt {

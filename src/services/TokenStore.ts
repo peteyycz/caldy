@@ -2,6 +2,7 @@ import GLib from "gi://GLib";
 import Gio from "gi://Gio";
 
 export interface Tokens {
+  id: string;
   access_token: string;
   refresh_token: string;
   expires_at: number;
@@ -23,27 +24,40 @@ function ensureParentDir(path: string) {
   }
 }
 
-export function loadTokens(): Tokens | null {
-  const file = Gio.File.new_for_path(tokensPath());
-  if (!file.query_exists(null)) return null;
-  const [ok, contents] = file.load_contents(null);
-  if (!ok) return null;
-  try {
-    return JSON.parse(decoder.decode(contents)) as Tokens;
-  } catch {
-    return null;
-  }
+export function newAccountId(): string {
+  return GLib.uuid_string_random();
 }
 
-export function saveTokens(tokens: Tokens): void {
+export function loadAccounts(): Tokens[] {
+  const file = Gio.File.new_for_path(tokensPath());
+  if (!file.query_exists(null)) return [];
+  const [ok, contents] = file.load_contents(null);
+  if (!ok) return [];
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(decoder.decode(contents));
+  } catch {
+    return [];
+  }
+  const list = Array.isArray(parsed) ? parsed : [parsed];
+  return list
+    .filter((t): t is Tokens =>
+      !!t && typeof t === "object"
+      && typeof (t as any).access_token === "string"
+      && typeof (t as any).refresh_token === "string",
+    )
+    .map((t) => ({ ...t, id: typeof t.id === "string" ? t.id : newAccountId() }));
+}
+
+export function saveAccounts(accounts: Tokens[]): void {
   const path = tokensPath();
   ensureParentDir(path);
   const file = Gio.File.new_for_path(path);
-  const bytes = encoder.encode(JSON.stringify(tokens, null, 2));
+  const bytes = encoder.encode(JSON.stringify(accounts, null, 2));
   file.replace_contents(bytes, null, false, Gio.FileCreateFlags.PRIVATE, null);
 }
 
-export function clearTokens(): void {
+export function clearAccounts(): void {
   const file = Gio.File.new_for_path(tokensPath());
   if (file.query_exists(null)) file.delete(null);
 }

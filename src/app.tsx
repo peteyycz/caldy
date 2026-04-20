@@ -1,9 +1,10 @@
 import app from "ags/gtk4/app";
 
-import { CalendarClient } from "./services/CalendarClient.js";
-import { authorize, loadPersistedTokens } from "./services/OAuth.js";
+import { CalendarClient, GCalCalendar, GCalEvent } from "./services/CalendarClient.js";
+import { authorize, loadPersistedAccounts } from "./services/OAuth.js";
 import { loadSettings } from "./services/Settings.js";
 import { generateThemeCss } from "./services/Theme.js";
+import { saveAccounts, Tokens } from "./services/TokenStore.js";
 import { applySettings, appState, patch } from "./state/appState.js";
 import Window, {
   setWindowVisible,
@@ -13,19 +14,54 @@ import Window, {
 
 import style from "./style.scss";
 
-let client: CalendarClient | null = null;
+const clients = new Map<string, CalendarClient>();
+
+function currentAccounts(): Tokens[] {
+  return [...clients.values()].map((c) => c.getTokens());
+}
+
+function persistAccounts() {
+  saveAccounts(currentAccounts());
+}
+
+async function fetchForClient(
+  client: CalendarClient,
+  weekStart: Date,
+  weekLength: number,
+): Promise<{ calendars: GCalCalendar[]; events: GCalEvent[] }> {
+  const calendars = await client.listCalendars();
+  const events = await client.fetchWeek(calendars, weekStart, weekLength);
+  return { calendars, events };
+}
 
 async function refreshEvents() {
-  if (!client) return;
+  if (clients.size === 0) return;
   const { weekStart, weekLength } = appState.get();
   patch({ loading: true, error: null });
   try {
-    const calendars = await client.listCalendars();
-    const events = await client.fetchWeek(calendars, weekStart, weekLength);
+    const results = await Promise.all(
+      [...clients.values()].map((c) => fetchForClient(c, weekStart, weekLength)),
+    );
+    const calendars = results.flatMap((r) => r.calendars);
+    const seen = new Set<string>();
+    const events = results
+      .flatMap((r) => r.events)
+      .filter((e) => {
+        const key = `${e.calendarId}:${e.id}`;
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      })
+      .sort((a, b) => {
+        const sa = a.start.dateTime ?? a.start.date ?? "";
+        const sb = b.start.dateTime ?? b.start.date ?? "";
+        return sa.localeCompare(sb);
+      });
+    persistAccounts();
     patch({
       calendars,
       events,
-      tokens: client.getTokens(),
+      accounts: currentAccounts(),
       loading: false,
     });
   } catch (err) {
@@ -37,12 +73,14 @@ async function refreshEvents() {
   }
 }
 
-async function signIn() {
+async function addAccount() {
   patch({ loading: true, error: null });
   try {
     const tokens = await authorize();
-    client = new CalendarClient(tokens);
-    patch({ tokens });
+    const client = new CalendarClient(tokens);
+    clients.set(tokens.id, client);
+    persistAccounts();
+    patch({ accounts: currentAccounts() });
     await refreshEvents();
   } catch (err) {
     console.error("sign-in failed", err);
@@ -61,12 +99,13 @@ function loadAndApplySettings() {
 }
 
 async function restoreSession() {
-  const persisted = loadPersistedTokens();
-  if (persisted) {
-    client = new CalendarClient(persisted);
-    patch({ tokens: persisted });
-    await refreshEvents();
+  const persisted = loadPersistedAccounts();
+  if (persisted.length === 0) return;
+  for (const tokens of persisted) {
+    clients.set(tokens.id, new CalendarClient(tokens));
   }
+  patch({ accounts: persisted });
+  await refreshEvents();
 }
 
 app.start({
@@ -97,7 +136,8 @@ app.start({
   main() {
     loadAndApplySettings();
     Window({
-      onSignIn: () => void signIn(),
+      onSignIn: () => void addAccount(),
+      onAddAccount: () => void addAccount(),
       onWeekChange: () => void refreshEvents(),
     });
     void restoreSession();

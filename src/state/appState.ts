@@ -11,9 +11,10 @@ import { Tokens } from "../services/TokenStore.js";
 import { startOfWeek } from "../util/week.js";
 
 export interface AppState {
-  tokens: Tokens | null;
+  accounts: Tokens[];
   calendars: GCalCalendar[];
   events: GCalEvent[];
+  hiddenCalendarIds: string[];
   weekStart: Date;
   weekLength: WeekLength;
   weekStartDay: WeekStartDay;
@@ -22,9 +23,10 @@ export interface AppState {
 }
 
 export const [appState, setAppState] = createState<AppState>({
-  tokens: null,
+  accounts: [],
   calendars: [],
   events: [],
+  hiddenCalendarIds: [],
   weekStart: startOfWeek(new Date(), DEFAULT_SETTINGS.weekStartDay),
   weekLength: DEFAULT_SETTINGS.weekLength,
   weekStartDay: DEFAULT_SETTINGS.weekStartDay,
@@ -34,6 +36,15 @@ export const [appState, setAppState] = createState<AppState>({
 
 export function patch(update: Partial<AppState>) {
   setAppState((s) => ({ ...s, ...update }));
+}
+
+export function toggleCalendarVisibility(calendarId: string) {
+  setAppState((s) => {
+    const hidden = s.hiddenCalendarIds.includes(calendarId)
+      ? s.hiddenCalendarIds.filter((id) => id !== calendarId)
+      : [...s.hiddenCalendarIds, calendarId];
+    return { ...s, hiddenCalendarIds: hidden };
+  });
 }
 
 export function applySettings(settings: Settings) {

@@ -9,6 +9,7 @@ interface Props {
   weekLength: number;
   events: GCalEvent[];
   calendars: GCalCalendar[];
+  hiddenCalendarIds: string[];
 }
 
 export default function WeekView({
@@ -16,14 +17,17 @@ export default function WeekView({
   weekLength,
   events,
   calendars,
+  hiddenCalendarIds,
 }: Props) {
   const days = weekDays(weekStart, weekLength);
   const todayKey = dayKey(new Date());
 
+  const hidden = new Set(hiddenCalendarIds);
   const calendarsById = new Map(calendars.map((c) => [c.id, c]));
   const byDay = new Map<string, GCalEvent[]>();
   for (const day of days) byDay.set(dayKey(day), []);
   for (const ev of events) {
+    if (hidden.has(ev.calendarId)) continue;
     const start = ev.start.dateTime
       ? new Date(ev.start.dateTime)
       : ev.start.date

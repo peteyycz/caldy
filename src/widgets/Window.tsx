@@ -2,15 +2,17 @@ import { With } from "gnim";
 import { Astal, Gdk, Gtk } from "ags/gtk4";
 import app from "ags/gtk4/app";
 
-import { appState, patch } from "../state/appState.js";
+import { appState, patch, toggleCalendarVisibility } from "../state/appState.js";
 import { addDays, startOfWeek } from "../util/week.js";
 import AuthPrompt from "./AuthPrompt.js";
+import CalendarBar from "./CalendarBar.js";
 import Header from "./Header.js";
 import LoadingView from "./LoadingView.js";
 import WeekView from "./WeekView.js";
 
 interface Props {
   onSignIn: () => void;
+  onAddAccount: () => void;
   onWeekChange: () => void;
 }
 
@@ -57,7 +59,7 @@ function onWindowMount(win: Astal.Window) {
   win.add_controller(kc);
 }
 
-export default function Window({ onSignIn, onWeekChange }: Props) {
+export default function Window({ onSignIn, onAddAccount, onWeekChange }: Props) {
   const shiftWeek = (direction: 1 | -1) => {
     const s = appState.get();
     patch({ weekStart: addDays(s.weekStart, direction * s.weekLength) });
@@ -72,7 +74,7 @@ export default function Window({ onSignIn, onWeekChange }: Props) {
 
   return (
     <window
-      visible
+      visible={false}
       name={WINDOW_NAME}
       class="caldy-window"
       anchor={Astal.WindowAnchor.TOP | Astal.WindowAnchor.RIGHT}
@@ -86,7 +88,7 @@ export default function Window({ onSignIn, onWeekChange }: Props) {
       <box orientation={Gtk.Orientation.VERTICAL} class="root" spacing={8}>
         <With value={appState}>
           {(s) =>
-            !s.tokens ? (
+            s.accounts.length === 0 ? (
               <AuthPrompt
                 error={s.error}
                 loading={s.loading}
@@ -112,8 +114,15 @@ export default function Window({ onSignIn, onWeekChange }: Props) {
                     weekLength={s.weekLength}
                     events={s.events}
                     calendars={s.calendars}
+                    hiddenCalendarIds={s.hiddenCalendarIds}
                   />
                 )}
+                <CalendarBar
+                  calendars={s.calendars}
+                  hiddenIds={s.hiddenCalendarIds}
+                  onToggle={toggleCalendarVisibility}
+                  onAddAccount={onAddAccount}
+                />
               </box>
             )
           }

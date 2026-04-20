@@ -4,7 +4,7 @@ import Soup from "gi://Soup?version=3.0";
 
 import { encodeQuery, httpPostForm, parseJson, parseQuery } from "../util/http.js";
 import { loadConfig } from "./Config.js";
-import { loadTokens, saveTokens, Tokens } from "./TokenStore.js";
+import { loadAccounts, newAccountId, Tokens } from "./TokenStore.js";
 
 const AUTH_ENDPOINT = "https://accounts.google.com/o/oauth2/v2/auth";
 const TOKEN_ENDPOINT = "https://oauth2.googleapis.com/token";
@@ -172,6 +172,7 @@ async function exchangeCode(
     token_type: string;
   }>(resp.body);
   return {
+    id: newAccountId(),
     access_token: payload.access_token,
     refresh_token: payload.refresh_token,
     expires_at: Date.now() + payload.expires_in * 1000,
@@ -201,7 +202,6 @@ export async function authorize(): Promise<Tokens> {
         teardown();
         try {
           const tokens = await exchangeCode(code, verifier, redirectUri);
-          saveTokens(tokens);
           resolve(tokens);
         } catch (err) {
           reject(err as Error);
@@ -243,16 +243,16 @@ export async function refresh(current: Tokens): Promise<Tokens> {
     refresh_token?: string;
   }>(resp.body);
   const tokens: Tokens = {
+    id: current.id,
     access_token: payload.access_token,
     refresh_token: payload.refresh_token ?? current.refresh_token,
     expires_at: Date.now() + payload.expires_in * 1000,
     scope: payload.scope ?? current.scope,
     token_type: payload.token_type ?? current.token_type,
   };
-  saveTokens(tokens);
   return tokens;
 }
 
-export function loadPersistedTokens(): Tokens | null {
-  return loadTokens();
+export function loadPersistedAccounts(): Tokens[] {
+  return loadAccounts();
 }
