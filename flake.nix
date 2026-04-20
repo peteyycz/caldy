@@ -29,6 +29,7 @@
         pkgs.gtk4
         pkgs.gtk4-layer-shell
         pkgs.libsoup_3
+        pkgs.libsecret
         pkgs.glib
         pkgs.glib-networking
         pkgs.json-glib
@@ -36,57 +37,61 @@
         astalIo
       ];
     in {
-      packages.${system}.default = pkgs.buildNpmPackage {
-        pname = "caldy";
-        version = "0.1.0";
+      packages.${system}.default = pkgs.callPackage (
+        { lib, buildNpmPackage, wrapGAppsHook4, gobject-introspection
+        , glib-networking, clientId ? "", clientSecret ? "" }:
+        buildNpmPackage {
+          pname = "caldy";
+          version = "0.1.0";
 
-        src = pkgs.lib.cleanSourceWith {
-          src = pkgs.lib.cleanSource ./.;
-          filter = path: _type:
-            let baseName = baseNameOf (toString path);
-            in !(builtins.elem baseName [ "node_modules" "dist" ".direnv" ]);
-        };
+          src = lib.cleanSourceWith {
+            src = lib.cleanSource ./.;
+            filter = path: _type:
+              let baseName = baseNameOf (toString path);
+              in !(builtins.elem baseName [ "node_modules" "dist" ".direnv" ]);
+          };
 
-        npmDepsHash = "sha256-H6CSiXwZ+vqQuiB9dj5U7m2yetPtfayUTwQ1ETapLRk=";
+          npmDepsHash = "sha256-H6CSiXwZ+vqQuiB9dj5U7m2yetPtfayUTwQ1ETapLRk=";
 
-        nativeBuildInputs = [
-          agsPkg
-          pkgs.wrapGAppsHook4
-          pkgs.gobject-introspection
-        ];
+          nativeBuildInputs = [ agsPkg wrapGAppsHook4 gobject-introspection ];
+          buildInputs = runtimeDeps;
 
-        buildInputs = runtimeDeps;
+          # Bake OAuth credentials into Config.ts at build time. Placeholder
+          # tokens are left intact when the args are empty — the runtime
+          # falls back to CALDY_GOOGLE_CLIENT_ID/_SECRET env vars in that case.
+          preBuild = ''
+            mkdir -p dist
+            substituteInPlace src/services/Config.ts \
+              --replace-fail '__CALDY_CLIENT_ID__'     '${clientId}' \
+              --replace-fail '__CALDY_CLIENT_SECRET__' '${clientSecret}'
+          '';
 
-        # `ags bundle` requires the output directory to exist.
-        preBuild = ''
-          mkdir -p dist
-        '';
+          # `npm run build` bundles to ./dist/caldy. The bundled app uses
+          # Gio.ApplicationFlags.HANDLES_COMMAND_LINE, so `caldy toggle` from
+          # a compositor bind forwards over DBus to the running instance —
+          # no wrapper or external client needed.
+          dontNpmInstall = true;
+          installPhase = ''
+            runHook preInstall
+            install -Dm755 dist/caldy $out/bin/caldy
+            runHook postInstall
+          '';
 
-        # `npm run build` bundles to ./dist/caldy. The bundled app uses
-        # Gio.ApplicationFlags.HANDLES_COMMAND_LINE, so `caldy toggle` from
-        # a compositor bind forwards over DBus to the running instance —
-        # no wrapper or external client needed.
-        dontNpmInstall = true;
-        installPhase = ''
-          runHook preInstall
-          install -Dm755 dist/caldy $out/bin/caldy
-          runHook postInstall
-        '';
+          # Make glib-networking's TLS backend available so HTTPS calls to Google work.
+          preFixup = ''
+            gappsWrapperArgs+=(
+              --prefix GIO_EXTRA_MODULES : "${glib-networking}/lib/gio/modules"
+            )
+          '';
 
-        # Make glib-networking's TLS backend available so HTTPS calls to Google work.
-        preFixup = ''
-          gappsWrapperArgs+=(
-            --prefix GIO_EXTRA_MODULES : "${pkgs.glib-networking}/lib/gio/modules"
-          )
-        '';
-
-        meta = with pkgs.lib; {
-          description = "Google Calendar weekly widget (Astal4 + GJS)";
-          homepage = "https://github.com/peteyycz/caldy";
-          platforms = platforms.linux;
-          mainProgram = "caldy";
-        };
-      };
+          meta = with lib; {
+            description = "Google Calendar weekly widget (Astal4 + GJS)";
+            homepage = "https://github.com/peteyycz/caldy";
+            platforms = platforms.linux;
+            mainProgram = "caldy";
+          };
+        }
+      ) { };
 
       apps.${system}.default = {
         type = "app";
@@ -94,20 +99,65 @@
       };
 
       homeManagerModules.default = { config, lib, pkgs, ... }:
-        let cfg = config.programs.caldy;
+        let
+          cfg = config.programs.caldy;
+          basePackage = self.packages.${pkgs.system}.default;
         in {
           options.programs.caldy = {
             enable = lib.mkEnableOption "caldy — Google Calendar weekly widget";
+            clientId = lib.mkOption {
+              type = lib.types.str;
+              default = "";
+              description = "Google OAuth desktop client_id baked into the binary.";
+            };
+            clientSecret = lib.mkOption {
+              type = lib.types.str;
+              default = "";
+              description = ''
+                Google OAuth desktop client_secret baked into the binary.
+                Desktop OAuth clients are "public" per Google's spec — this
+                value is not truly secret, but avoid committing it to
+                public repos.
+              '';
+            };
             package = lib.mkOption {
               type = lib.types.package;
-              default = self.packages.${pkgs.system}.default;
-              defaultText = lib.literalExpression "caldy.packages.\${pkgs.system}.default";
+              default = basePackage.override {
+                inherit (cfg) clientId clientSecret;
+              };
+              defaultText = lib.literalExpression
+                "caldy.packages.\${pkgs.system}.default.override { inherit clientId clientSecret; }";
               description = "The caldy package to install.";
+            };
+            settings = lib.mkOption {
+              type = (pkgs.formats.toml { }).type;
+              default = { };
+              example = lib.literalExpression ''
+                {
+                  week = {
+                    show_weekend = true;
+                    start_day = "monday";
+                  };
+                  theme = {
+                    bg = "#1a1b1f";
+                    accent = "#4285f4";
+                  };
+                }
+              '';
+              description = ''
+                Contents of $XDG_CONFIG_HOME/caldy/config.toml. When non-empty,
+                home-manager manages the file — do not hand-edit it. See
+                caldy's README for the supported keys.
+              '';
             };
           };
 
           config = lib.mkIf cfg.enable {
             home.packages = [ cfg.package ];
+
+            xdg.configFile."caldy/config.toml" = lib.mkIf (cfg.settings != { }) {
+              source = (pkgs.formats.toml { }).generate "caldy-config.toml" cfg.settings;
+            };
 
             systemd.user.services.caldy = {
               Unit = {
@@ -137,6 +187,7 @@
           pkgs.gtk4
           pkgs.gtk4-layer-shell
           pkgs.libsoup_3
+          pkgs.libsecret
           pkgs.glib
           pkgs.glib-networking
           pkgs.json-glib

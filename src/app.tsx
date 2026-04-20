@@ -20,27 +20,26 @@ function currentAccounts(): Tokens[] {
   return [...clients.values()].map((c) => c.getTokens());
 }
 
-function persistAccounts() {
-  saveAccounts(currentAccounts());
+function persistAccounts(): Promise<void> {
+  return saveAccounts(currentAccounts());
 }
 
 async function fetchForClient(
   client: CalendarClient,
   weekStart: Date,
-  weekLength: number,
 ): Promise<{ calendars: GCalCalendar[]; events: GCalEvent[] }> {
   const calendars = await client.listCalendars();
-  const events = await client.fetchWeek(calendars, weekStart, weekLength);
+  const events = await client.fetchWeek(calendars, weekStart, 7);
   return { calendars, events };
 }
 
 async function refreshEvents() {
   if (clients.size === 0) return;
-  const { weekStart, weekLength } = appState.get();
+  const { weekStart } = appState.get();
   patch({ loading: true, error: null });
   try {
     const results = await Promise.all(
-      [...clients.values()].map((c) => fetchForClient(c, weekStart, weekLength)),
+      [...clients.values()].map((c) => fetchForClient(c, weekStart)),
     );
     const calendars = results.flatMap((r) => r.calendars);
     const seen = new Set<string>();
@@ -57,7 +56,7 @@ async function refreshEvents() {
         const sb = b.start.dateTime ?? b.start.date ?? "";
         return sa.localeCompare(sb);
       });
-    persistAccounts();
+    await persistAccounts();
     patch({
       calendars,
       events,
@@ -79,7 +78,7 @@ async function addAccount() {
     const tokens = await authorize();
     const client = new CalendarClient(tokens);
     clients.set(tokens.id, client);
-    persistAccounts();
+    await persistAccounts();
     patch({ accounts: currentAccounts() });
     await refreshEvents();
   } catch (err) {
@@ -99,13 +98,18 @@ function loadAndApplySettings() {
 }
 
 async function restoreSession() {
-  const persisted = loadPersistedAccounts();
-  if (persisted.length === 0) return;
-  for (const tokens of persisted) {
-    clients.set(tokens.id, new CalendarClient(tokens));
+  try {
+    const persisted = await loadPersistedAccounts();
+    if (persisted.length === 0) return;
+    for (const tokens of persisted) {
+      clients.set(tokens.id, new CalendarClient(tokens));
+    }
+    patch({ accounts: persisted });
+    await refreshEvents();
+  } catch (err) {
+    console.error("restoreSession failed", err);
+    patch({ error: (err as Error).message });
   }
-  patch({ accounts: persisted });
-  await refreshEvents();
 }
 
 app.start({

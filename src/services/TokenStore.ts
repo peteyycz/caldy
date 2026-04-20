@@ -1,5 +1,5 @@
 import GLib from "gi://GLib";
-import Gio from "gi://Gio";
+import Secret from "gi://Secret?version=1";
 
 export interface Tokens {
   id: string;
@@ -10,54 +10,71 @@ export interface Tokens {
   token_type?: string;
 }
 
-const encoder = new TextEncoder();
-const decoder = new TextDecoder("utf-8");
-
-function tokensPath(): string {
-  return GLib.build_filenamev([GLib.get_user_config_dir(), "caldy", "tokens.json"]);
-}
-
-function ensureParentDir(path: string) {
-  const parent = Gio.File.new_for_path(path).get_parent();
-  if (parent && !parent.query_exists(null)) {
-    parent.make_directory_with_parents(null);
-  }
-}
+const SCHEMA = Secret.Schema.new(
+  "dev.caldy.Tokens",
+  Secret.SchemaFlags.NONE,
+  { kind: Secret.SchemaAttributeType.STRING },
+);
+const ATTRS = { kind: "accounts" };
+const LABEL = "caldy accounts";
 
 export function newAccountId(): string {
   return GLib.uuid_string_random();
 }
 
-export function loadAccounts(): Tokens[] {
-  const file = Gio.File.new_for_path(tokensPath());
-  if (!file.query_exists(null)) return [];
-  const [ok, contents] = file.load_contents(null);
-  if (!ok) return [];
-  let parsed: unknown;
-  try {
-    parsed = JSON.parse(decoder.decode(contents));
-  } catch {
-    return [];
-  }
-  const list = Array.isArray(parsed) ? parsed : [parsed];
-  return list
-    .filter((t): t is Tokens =>
-      !!t && typeof t === "object"
-      && typeof (t as any).access_token === "string"
-      && typeof (t as any).refresh_token === "string",
-    )
-    .map((t) => ({ ...t, id: typeof t.id === "string" ? t.id : newAccountId() }));
+export function loadAccounts(): Promise<Tokens[]> {
+  return new Promise((resolve, reject) => {
+    Secret.password_lookup(SCHEMA, ATTRS, null, (_src, result) => {
+      try {
+        const raw = Secret.password_lookup_finish(result);
+        if (!raw) return resolve([]);
+        const parsed = JSON.parse(raw);
+        if (!Array.isArray(parsed)) return resolve([]);
+        resolve(
+          parsed.filter((t: any): t is Tokens =>
+            !!t && typeof t === "object"
+            && typeof t.access_token === "string"
+            && typeof t.refresh_token === "string"
+            && typeof t.id === "string",
+          ),
+        );
+      } catch (err) {
+        reject(err);
+      }
+    });
+  });
 }
 
-export function saveAccounts(accounts: Tokens[]): void {
-  const path = tokensPath();
-  ensureParentDir(path);
-  const file = Gio.File.new_for_path(path);
-  const bytes = encoder.encode(JSON.stringify(accounts, null, 2));
-  file.replace_contents(bytes, null, false, Gio.FileCreateFlags.PRIVATE, null);
+export function saveAccounts(tokens: Tokens[]): Promise<void> {
+  return new Promise((resolve, reject) => {
+    Secret.password_store(
+      SCHEMA,
+      ATTRS,
+      Secret.COLLECTION_DEFAULT,
+      LABEL,
+      JSON.stringify(tokens),
+      null,
+      (_src, result) => {
+        try {
+          Secret.password_store_finish(result);
+          resolve();
+        } catch (err) {
+          reject(err);
+        }
+      },
+    );
+  });
 }
 
-export function clearAccounts(): void {
-  const file = Gio.File.new_for_path(tokensPath());
-  if (file.query_exists(null)) file.delete(null);
+export function clearAccounts(): Promise<void> {
+  return new Promise((resolve, reject) => {
+    Secret.password_clear(SCHEMA, ATTRS, null, (_src, result) => {
+      try {
+        Secret.password_clear_finish(result);
+        resolve();
+      } catch (err) {
+        reject(err);
+      }
+    });
+  });
 }

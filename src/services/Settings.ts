@@ -3,7 +3,6 @@ import Gio from "gi://Gio";
 import { parse as parseToml } from "smol-toml";
 
 export type WeekStartDay = 0 | 1 | 2 | 3 | 4 | 5 | 6;
-export type WeekLength = 5 | 7;
 
 export interface ThemeConfig {
   bg: string;
@@ -36,13 +35,13 @@ export const DEFAULT_THEME: ThemeConfig = {
 };
 
 export interface Settings {
-  weekLength: WeekLength;
+  showWeekend: boolean;
   weekStartDay: WeekStartDay;
   theme: ThemeConfig;
 }
 
 export const DEFAULT_SETTINGS: Settings = {
-  weekLength: 7,
+  showWeekend: true,
   weekStartDay: 1,
   theme: { ...DEFAULT_THEME },
 };
@@ -80,8 +79,8 @@ function parseStartDay(v: unknown): WeekStartDay | null {
   return null;
 }
 
-function parseLength(v: unknown): WeekLength | null {
-  if (v === 5 || v === 7) return v;
+function parseShowWeekend(v: unknown): boolean | null {
+  if (typeof v === "boolean") return v;
   return null;
 }
 
@@ -118,12 +117,13 @@ export function loadSettings(): Settings {
     if (!ok) return { ...DEFAULT_SETTINGS };
     const text = decoder.decode(contents);
     const parsed = parseToml(text) as {
-      week?: { length?: unknown; start_day?: unknown };
+      week?: { show_weekend?: unknown; start_day?: unknown };
       theme?: unknown;
     };
     const week = parsed.week ?? {};
     return {
-      weekLength: parseLength(week.length) ?? DEFAULT_SETTINGS.weekLength,
+      showWeekend:
+        parseShowWeekend(week.show_weekend) ?? DEFAULT_SETTINGS.showWeekend,
       weekStartDay:
         parseStartDay(week.start_day) ?? DEFAULT_SETTINGS.weekStartDay,
       theme: parseTheme(parsed.theme),

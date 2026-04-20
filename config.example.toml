@@ -2,8 +2,9 @@
 # (usually ~/.config/caldy/config.toml) to override defaults.
 
 [week]
-# How many day columns to show. 5 = work week, 7 = full week.
-length = 7
+# Whether to show Saturday and Sunday columns.
+# false = work-week view (Mon–Fri), true = full week.
+show_weekend = true
 
 # Which day the week starts on.
 # Accepts a name ("monday", "tuesday", ...) or a number 0–6

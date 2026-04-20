@@ -4,7 +4,7 @@ import { formatRange } from "../util/week.js";
 
 interface Props {
   weekStart: Date;
-  weekLength: number;
+  showWeekend: boolean;
   onPrev: () => void;
   onToday: () => void;
   onNext: () => void;
@@ -12,7 +12,7 @@ interface Props {
 
 export default function Header({
   weekStart,
-  weekLength,
+  showWeekend,
   onPrev,
   onToday,
   onNext,
@@ -23,7 +23,7 @@ export default function Header({
         class="range"
         xalign={0}
         hexpand
-        label={formatRange(weekStart, weekLength)}
+        label={formatRange(weekStart, showWeekend)}
       />
       <button class="nav" onClicked={onPrev} label="‹" />
       <button class="nav" onClicked={onToday} label="Today" />

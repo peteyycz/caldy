@@ -6,7 +6,7 @@ import DayColumn from "./DayColumn.js";
 
 interface Props {
   weekStart: Date;
-  weekLength: number;
+  showWeekend: boolean;
   events: GCalEvent[];
   calendars: GCalCalendar[];
   hiddenCalendarIds: string[];
@@ -14,12 +14,12 @@ interface Props {
 
 export default function WeekView({
   weekStart,
-  weekLength,
+  showWeekend,
   events,
   calendars,
   hiddenCalendarIds,
 }: Props) {
-  const days = weekDays(weekStart, weekLength);
+  const days = weekDays(weekStart, showWeekend);
   const todayKey = dayKey(new Date());
 
   const hidden = new Set(hiddenCalendarIds);

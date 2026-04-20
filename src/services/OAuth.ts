@@ -3,7 +3,7 @@ import Gio from "gi://Gio";
 import Soup from "gi://Soup?version=3.0";
 
 import { encodeQuery, httpPostForm, parseJson, parseQuery } from "../util/http.js";
-import { loadConfig } from "./Config.js";
+import { getCredentials } from "./Config.js";
 import { loadAccounts, newAccountId, Tokens } from "./TokenStore.js";
 
 const AUTH_ENDPOINT = "https://accounts.google.com/o/oauth2/v2/auth";
@@ -152,13 +152,13 @@ async function exchangeCode(
   verifier: string,
   redirectUri: string,
 ): Promise<Tokens> {
-  const cfg = loadConfig();
+  const { clientId, clientSecret } = getCredentials();
   const resp = await httpPostForm(TOKEN_ENDPOINT, {
     grant_type: "authorization_code",
     code,
     code_verifier: verifier,
-    client_id: cfg.client_id,
-    client_secret: cfg.client_secret,
+    client_id: clientId,
+    client_secret: clientSecret,
     redirect_uri: redirectUri,
   });
   if (resp.status !== 200) {
@@ -182,7 +182,7 @@ async function exchangeCode(
 }
 
 export async function authorize(): Promise<Tokens> {
-  const cfg = loadConfig();
+  const { clientId } = getCredentials();
   const { verifier, challenge } = pkcePair();
   const state = randomUrlSafe(16);
 
@@ -217,7 +217,7 @@ export async function authorize(): Promise<Tokens> {
       const started = startLoopbackServer(handle);
       server = started.server;
       redirectUri = started.redirectUri;
-      openBrowser(buildAuthUrl(cfg.client_id, redirectUri, challenge, state));
+      openBrowser(buildAuthUrl(clientId, redirectUri, challenge, state));
     } catch (err) {
       reject(err as Error);
     }
@@ -225,12 +225,12 @@ export async function authorize(): Promise<Tokens> {
 }
 
 export async function refresh(current: Tokens): Promise<Tokens> {
-  const cfg = loadConfig();
+  const { clientId, clientSecret } = getCredentials();
   const resp = await httpPostForm(TOKEN_ENDPOINT, {
     grant_type: "refresh_token",
     refresh_token: current.refresh_token,
-    client_id: cfg.client_id,
-    client_secret: cfg.client_secret,
+    client_id: clientId,
+    client_secret: clientSecret,
   });
   if (resp.status !== 200) {
     throw new Error(`Token refresh failed (${resp.status}): ${resp.body}`);
@@ -253,6 +253,6 @@ export async function refresh(current: Tokens): Promise<Tokens> {
   return tokens;
 }
 
-export function loadPersistedAccounts(): Tokens[] {
+export function loadPersistedAccounts(): Promise<Tokens[]> {
   return loadAccounts();
 }

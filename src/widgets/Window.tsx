@@ -62,7 +62,7 @@ function onWindowMount(win: Astal.Window) {
 export default function Window({ onSignIn, onAddAccount, onWeekChange }: Props) {
   const shiftWeek = (direction: 1 | -1) => {
     const s = appState.get();
-    patch({ weekStart: addDays(s.weekStart, direction * s.weekLength) });
+    patch({ weekStart: addDays(s.weekStart, direction * 7) });
     onWeekChange();
   };
 
@@ -98,7 +98,7 @@ export default function Window({ onSignIn, onAddAccount, onWeekChange }: Props) 
               <box orientation={Gtk.Orientation.VERTICAL} spacing={8} hexpand vexpand>
                 <Header
                   weekStart={s.weekStart}
-                  weekLength={s.weekLength}
+                  showWeekend={s.showWeekend}
                   onPrev={() => shiftWeek(-1)}
                   onToday={goToday}
                   onNext={() => shiftWeek(1)}
@@ -111,7 +111,7 @@ export default function Window({ onSignIn, onAddAccount, onWeekChange }: Props) 
                 ) : (
                   <WeekView
                     weekStart={s.weekStart}
-                    weekLength={s.weekLength}
+                    showWeekend={s.showWeekend}
                     events={s.events}
                     calendars={s.calendars}
                     hiddenCalendarIds={s.hiddenCalendarIds}

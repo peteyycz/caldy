@@ -8,5 +8,4 @@ result-*
 .direnv/
 .envrc.local
 
-env.json
 tokens.json

@@ -4,7 +4,6 @@ import { GCalCalendar, GCalEvent } from "../services/CalendarClient.js";
 import {
   DEFAULT_SETTINGS,
   Settings,
-  WeekLength,
   WeekStartDay,
 } from "../services/Settings.js";
 import { Tokens } from "../services/TokenStore.js";
@@ -16,7 +15,7 @@ export interface AppState {
   events: GCalEvent[];
   hiddenCalendarIds: string[];
   weekStart: Date;
-  weekLength: WeekLength;
+  showWeekend: boolean;
   weekStartDay: WeekStartDay;
   loading: boolean;
   error: string | null;
@@ -28,7 +27,7 @@ export const [appState, setAppState] = createState<AppState>({
   events: [],
   hiddenCalendarIds: [],
   weekStart: startOfWeek(new Date(), DEFAULT_SETTINGS.weekStartDay),
-  weekLength: DEFAULT_SETTINGS.weekLength,
+  showWeekend: DEFAULT_SETTINGS.showWeekend,
   weekStartDay: DEFAULT_SETTINGS.weekStartDay,
   loading: false,
   error: null,
@@ -50,7 +49,7 @@ export function toggleCalendarVisibility(calendarId: string) {
 export function applySettings(settings: Settings) {
   const current = appState.get();
   patch({
-    weekLength: settings.weekLength,
+    showWeekend: settings.showWeekend,
     weekStartDay: settings.weekStartDay,
     weekStart: startOfWeek(current.weekStart, settings.weekStartDay),
   });

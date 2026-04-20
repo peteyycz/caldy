@@ -35,15 +35,15 @@ using OAuth 2.0 with a loopback redirect.
    → **Create credentials** → **OAuth client ID** → **Desktop app**. Enable the
    Google Calendar API for the same project.
 
-4. Drop the credentials into `$XDG_CONFIG_HOME/caldy/env.json`
-   (usually `~/.config/caldy/env.json`):
+4. For local development (`npm run dev`), export the credentials:
    ```sh
-   mkdir -p ~/.config/caldy
-   cp env.example.json ~/.config/caldy/env.json
-   $EDITOR ~/.config/caldy/env.json
+   export CALDY_GOOGLE_CLIENT_ID='...apps.googleusercontent.com'
+   export CALDY_GOOGLE_CLIENT_SECRET='...'
    ```
-   Alternatively, export `CALDY_GOOGLE_CLIENT_ID` and
-   `CALDY_GOOGLE_CLIENT_SECRET` before launching.
+   The easiest home for these is `.envrc.local` (already git-ignored)
+   alongside the shipped `.envrc`. These env vars are only consulted when
+   the binary wasn't built through Nix with embedded credentials (see
+   **Providing OAuth credentials** below for the Nix path).
 
 ## Running
 
@@ -62,6 +62,12 @@ loopback listener, tokens are persisted at
 npm run build
 # produces ./dist/caldy — a single executable bundle
 ```
+
+A dev-shell `npm run build` leaves the credential placeholder tokens in
+`src/services/Config.ts` untouched — the resulting binary falls back to the
+`CALDY_GOOGLE_CLIENT_ID` / `CALDY_GOOGLE_CLIENT_SECRET` env vars at runtime.
+For a binary with credentials baked in, use `nix build` with overrides (see
+**Providing OAuth credentials** below).
 
 ## Install via Nix
 
@@ -100,6 +106,57 @@ or in a home-manager module:
 ```nix
 home.packages = [ inputs.caldy.packages.x86_64-linux.default ];
 ```
+
+### Providing OAuth credentials
+
+caldy's `client_id` and `client_secret` are baked into the binary at build
+time. The flake exposes `clientId` and `clientSecret` as package arguments
+(both default to empty strings). A binary built without overrides will
+still launch, but sign-in throws a "Missing Google OAuth credentials"
+error unless the `CALDY_GOOGLE_CLIENT_ID` / `CALDY_GOOGLE_CLIENT_SECRET`
+env vars are set at runtime.
+
+Ad-hoc local build:
+
+```sh
+nix build --impure --expr \
+  'let f = builtins.getFlake (toString ./.);
+   in f.packages.x86_64-linux.default.override {
+        clientId     = "XXX.apps.googleusercontent.com";
+        clientSecret = "YYY";
+      }'
+```
+
+(`nix build --override-input` only overrides flake *inputs*, not package
+arguments — hence the `--impure` expression form.)
+
+Consuming the flake:
+
+```nix
+inputs.caldy.packages.x86_64-linux.default.override {
+  clientId     = "XXX.apps.googleusercontent.com";
+  clientSecret = "YYY";
+}
+```
+
+Via the home-manager module (preferred — see next section):
+
+```nix
+programs.caldy = {
+  enable       = true;
+  clientId     = "XXX.apps.googleusercontent.com";
+  clientSecret = "YYY";
+};
+```
+
+#### Why it's OK to embed the "secret"
+
+Google classifies desktop OAuth clients as "public clients" — the
+`client_secret` authenticates the *application* to Google, not the user,
+and PKCE protects the authorization-code exchange. Committing this pair
+into a private config repo or baking it into a Nix-built binary is the
+expected Google-approved pattern for desktop apps. Don't publish it in
+public repos all the same.
 
 ### Autostart via home-manager
 
@@ -158,18 +215,14 @@ wayland.windowManager.hyprland.settings.bind = [
 Sway/river use the same `caldy toggle` command — only the bind syntax
 changes (`bindsym $mod+c exec …` for sway, `riverctl map …` for river).
 
-The same OAuth credentials setup in `~/.config/caldy/env.json` (or the
-`CALDY_GOOGLE_CLIENT_ID` / `CALDY_GOOGLE_CLIENT_SECRET` env vars) is still
-required on first run.
-
 ## Configuration
 
 Optional settings live at `$XDG_CONFIG_HOME/caldy/config.toml`. If the file is
-missing, defaults apply (7-day week, Monday start, built-in dark palette).
+missing, defaults apply (weekend shown, Monday start, built-in dark palette).
 
 ```toml
 [week]
-length = 7              # 5 (Mon–Fri work week) or 7 (full week)
+show_weekend = true     # false = hide Sat/Sun, true = full week
 start_day = "monday"    # day name ("sunday".."saturday") or 0–6 (0 = Sunday)
 
 [theme]
@@ -188,6 +241,34 @@ logged; valid keys still apply.
 
 See `config.example.toml` in the repo for a copy-pasteable version with a
 Gruvbox-dark example `[theme]` block.
+
+### Declarative config via home-manager
+
+The home-manager module also exposes `programs.caldy.settings` — a typed
+attrset serialized to `$XDG_CONFIG_HOME/caldy/config.toml` for you:
+
+```nix
+programs.caldy = {
+  enable       = true;
+  clientId     = "XXX.apps.googleusercontent.com";
+  clientSecret = "YYY";
+  settings = {
+    week = {
+      show_weekend = true;
+      start_day    = "monday";
+    };
+    theme = {
+      bg         = "#1a1b1f";
+      accent     = "#4285f4";
+    };
+  };
+};
+```
+
+When `settings` is non-empty, home-manager owns the file — don't hand-edit
+`~/.config/caldy/config.toml` or the next `home-manager switch` will refuse
+to overwrite it. Leave `settings = { };` (the default) to manage the file
+manually.
 
 ## Data
 

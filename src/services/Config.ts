@@ -1,41 +1,34 @@
 import GLib from "gi://GLib";
-import Gio from "gi://Gio";
 
-export interface OAuthConfig {
-  client_id: string;
-  client_secret: string;
+// Rewritten by Nix at build time via substituteInPlace in flake.nix.
+// The tokens must remain unique in this file; `--replace-fail` errors
+// if they aren't found.
+export const CLIENT_ID = "__CALDY_CLIENT_ID__";
+export const CLIENT_SECRET = "__CALDY_CLIENT_SECRET__";
+
+// Dev-shell builds leave the "__CALDY_…" placeholder intact; Nix builds
+// with default empty args substitute them to "". Both cases fall through
+// to the env-var fallback. Comparing against the full placeholder token
+// would be self-defeating — Nix would rewrite both sides.
+function notInjected(v: string): boolean {
+  return v === "" || v.startsWith("__CALDY_");
 }
 
-const decoder = new TextDecoder("utf-8");
+export function getCredentials(): { clientId: string; clientSecret: string } {
+  const clientId = notInjected(CLIENT_ID)
+    ? (GLib.getenv("CALDY_GOOGLE_CLIENT_ID") ?? "")
+    : CLIENT_ID;
+  const clientSecret = notInjected(CLIENT_SECRET)
+    ? (GLib.getenv("CALDY_GOOGLE_CLIENT_SECRET") ?? "")
+    : CLIENT_SECRET;
 
-function configFilePath(): string {
-  return GLib.build_filenamev([GLib.get_user_config_dir(), "caldy", "env.json"]);
-}
-
-function readJsonFile(path: string): OAuthConfig | null {
-  const file = Gio.File.new_for_path(path);
-  if (!file.query_exists(null)) return null;
-  const [ok, contents] = file.load_contents(null);
-  if (!ok) return null;
-  try {
-    return JSON.parse(decoder.decode(contents)) as OAuthConfig;
-  } catch {
-    return null;
+  if (!clientId || !clientSecret) {
+    throw new Error(
+      "Missing Google OAuth credentials. " +
+      "Nix build: `.override { clientId = \"...\"; clientSecret = \"...\"; }`. " +
+      "Dev shell: export CALDY_GOOGLE_CLIENT_ID and CALDY_GOOGLE_CLIENT_SECRET " +
+      "(e.g., in .envrc.local).",
+    );
   }
-}
-
-export function loadConfig(): OAuthConfig {
-  const fromFile = readJsonFile(configFilePath());
-  if (fromFile?.client_id && fromFile?.client_secret) return fromFile;
-
-  const envId = GLib.getenv("CALDY_GOOGLE_CLIENT_ID");
-  const envSecret = GLib.getenv("CALDY_GOOGLE_CLIENT_SECRET");
-  if (envId && envSecret) {
-    return { client_id: envId, client_secret: envSecret };
-  }
-
-  throw new Error(
-    `Missing Google OAuth credentials. Create ${configFilePath()} ` +
-    `or set CALDY_GOOGLE_CLIENT_ID and CALDY_GOOGLE_CLIENT_SECRET.`,
-  );
+  return { clientId, clientSecret };
 }
